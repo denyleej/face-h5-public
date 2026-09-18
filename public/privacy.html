@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Privacy - Face Capture</title>
+    <style>
+      :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #18201f; background: #eef2f1; letter-spacing: 0; }
+      body { width: min(720px, calc(100% - 32px)); margin: 48px auto; line-height: 1.65; }
+      h1 { font-size: 28px; } h2 { margin-top: 32px; font-size: 18px; } a { color: #176b5b; } li { margin: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <a href="./">Back to capture</a>
+    <h1>Privacy</h1>
+    <p>This reference processes camera frames in the browser tab.</p>
+    <ul>
+      <li>Camera access starts only after the user presses Start camera.</li>
+      <li>Audio is never requested.</li>
+      <li>Face landmarks and action scores are computed locally and are not persisted.</li>
+      <li>Recordings remain in browser memory until replaced, downloaded, or the page closes.</li>
+      <li>The application does not send camera frames, landmarks, recordings, or device metadata anywhere.</li>
+      <li>The application does not use analytics or persistent browser storage.</li>
+    </ul>
+    <h2>Hosting</h2>
+    <p>The static hosting provider receives ordinary asset requests needed to load the page, WebAssembly runtime, and model file. Review the provider's request logging and retention settings before deployment.</p>
+    <p>Any downstream product that adds network submission, identity data, analytics, or persistent storage must provide its own consent, retention, deletion, and security controls.</p>
+  </body>
+</html>
