@@ -18,7 +18,8 @@
     "audit": "node scripts/audit.mjs"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "0.10.22-rc.20250304"
+    "@mediapipe/tasks-vision": "0.10.22-rc.20250304",
+    "mp4-muxer": "5.2.2"
   },
   "devDependencies": {
     "vite": "8.3.0"

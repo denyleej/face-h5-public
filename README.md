@@ -9,16 +9,17 @@ The project is deliberately standalone. It contains no service integration, busi
 - Front camera target: `480 x 640` at `30 fps`
 - Local single-face, position, and distance feedback
 - Blink and mouth-open-and-close challenges using local blendshape scores
-- Recording starts with the challenge and stops shortly after the action completes
+- Recording starts at the action onset and captures `16` frames at constant `30 fps` (`~533 ms`)
 - Challenge timeout: `8 seconds`
-- Native `MediaRecorder` output with MP4 preferred and WebM fallback
+- WebCodecs H.264 MP4 with fixed frame timestamps and a `+90°` display matrix
+- `MediaRecorder` fallback when WebCodecs H.264 is unavailable
 - Local preview and explicit download
 - No audio capture
 - No media upload or persistent browser storage
 - GitHub Pages deployment workflow
 - Automated public-source audit
 
-Camera constraints are requests, not guarantees. Always read `MediaStreamTrack.getSettings()` and the recorded media metadata to learn the dimensions and frame rate selected by the device.
+Camera constraints are requests, not guarantees. WebCodecs CFR output uses explicit 30 fps timestamps, while source frames still depend on camera availability. Read the recorded metadata to confirm stored dimensions and display orientation.
 
 ## Local development
 

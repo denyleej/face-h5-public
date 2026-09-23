@@ -1,4 +1,4 @@
-import { CameraCapture, fileExtension, formatBytes } from './capture.js';
+import { CameraCapture, DEFAULT_DURATION_MS, fileExtension, formatBytes } from './capture.js';
 import { LocalFaceDetector } from './face-detector.js';
 import { ACTIONS, ActionChallenge } from './action-challenge.js';
 
@@ -33,16 +33,19 @@ const capture = new CameraCapture(elements.camera);
 const challenge = new ActionChallenge();
 let selectedAction = ACTIONS.BLINK;
 let activeRecording = null;
-let completingChallenge = false;
+let actionCaptureSession = null;
 const detector = new LocalFaceDetector(elements.camera, elements.canvas, result => {
   elements.faceState.textContent = result.label;
   elements.stage.dataset.face = result.state;
-  if (activeRecording) {
-    const action = challenge.update(result);
+  if (actionCaptureSession) {
+    const action = challenge.active ? challenge.update(result) : null;
+    if (!action) return;
     elements.status.textContent = action.prompt;
-    if (action.detected && !completingChallenge) {
-      completingChallenge = true;
-      setTimeout(() => activeRecording?.stop('detected'), 250);
+    if (action.startRecording) startActionRecording();
+    if (action.detected && actionCaptureSession) {
+      actionCaptureSession.actionDetected = true;
+      detector.stop();
+      completeActionCapture();
     }
   } else if (elements.stage.dataset.view !== 'recording') elements.status.textContent = result.label;
 });
@@ -58,8 +61,63 @@ function clearError() {
   elements.error.hidden = true;
 }
 
+function completeActionCapture() {
+  const session = actionCaptureSession;
+  if (!session || !session.actionDetected || !session.recording) return;
+  actionCaptureSession = null;
+  clearTimeout(session.timeout);
+  activeRecording = null;
+  session.resolve(session.recording);
+}
+
+function cancelActionCapture(error) {
+  const session = actionCaptureSession;
+  if (!session) return;
+  actionCaptureSession = null;
+  clearTimeout(session.timeout);
+  activeRecording?.stop('cancelled');
+  activeRecording = null;
+  session.reject(error);
+}
+
+function startActionRecording() {
+  const session = actionCaptureSession;
+  if (!session || activeRecording) return;
+  try {
+    detector.setMaximumFrameRate(15);
+    activeRecording = capture.beginRecording(DEFAULT_DURATION_MS);
+    activeRecording.result.then(recording => {
+      if (actionCaptureSession !== session) return;
+      if (recording.stopReason !== 'timeout') {
+        cancelActionCapture(new Error('Action video recording was interrupted.'));
+        return;
+      }
+      session.recording = recording;
+      activeRecording = null;
+      completeActionCapture();
+    }, error => {
+      if (actionCaptureSession === session) cancelActionCapture(error);
+    }).finally(() => {
+      detector.setMaximumFrameRate(0);
+    });
+  } catch (error) {
+    detector.setMaximumFrameRate(0);
+    cancelActionCapture(error);
+  }
+}
+
+function waitForActionCapture(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const session = { resolve, reject, recording: null, actionDetected: false, timeout: null };
+    actionCaptureSession = session;
+    session.timeout = setTimeout(() => {
+      if (actionCaptureSession === session) cancelActionCapture(new Error('Face action was not detected in time.'));
+    }, timeoutMs);
+  });
+}
+
 function selectAction(action) {
-  if (activeRecording) return;
+  if (actionCaptureSession || activeRecording) return;
   selectedAction = action;
   const blink = action === ACTIONS.BLINK;
   elements.blinkAction.classList.toggle('is-active', blink);
@@ -113,6 +171,9 @@ async function startCamera() {
 }
 
 function stopCamera() {
+  cancelActionCapture(new Error('Camera stopped.'));
+  activeRecording?.stop('stopped');
+  activeRecording = null;
   detector.stop();
   capture.stop();
   elements.stage.dataset.state = recordingUrl ? 'recorded' : 'idle';
@@ -131,20 +192,19 @@ async function recordVideo() {
   elements.record.disabled = true;
   elements.start.disabled = true;
   elements.stop.disabled = true;
-  completingChallenge = false;
   challenge.start(selectedAction);
   elements.status.textContent = selectedAction === ACTIONS.BLINK ? 'Blink once' : 'Open and close your mouth';
   elements.blinkAction.disabled = true;
   elements.mouthAction.disabled = true;
   try {
-    activeRecording = capture.beginRecording(8000);
-    const result = await activeRecording.result;
-    if (result.stopReason !== 'detected' || !challenge.detected) throw new Error('Face action was not detected in time.');
+    const result = await waitForActionCapture();
+    if (result.stopReason !== 'timeout' || !challenge.detected) throw new Error('Face action was not detected in time.');
     if (recordingUrl) URL.revokeObjectURL(recordingUrl);
     recordingUrl = URL.createObjectURL(result.blob);
     elements.recording.src = recordingUrl;
     elements.recordingTab.disabled = false;
-    elements.recordingFormat.textContent = result.mimeType.split(';')[0];
+    const format = result.mimeType.split(';')[0];
+    elements.recordingFormat.textContent = result.backend === 'webcodecs-cfr' ? `${format} (CFR)` : format;
     elements.recordingAction.textContent = selectedAction === ACTIONS.BLINK ? 'Blink' : 'Open mouth';
     elements.recordingResolution.textContent = result.metadata.width && result.metadata.height
       ? `${result.metadata.width} x ${result.metadata.height}` : '-';
@@ -159,9 +219,10 @@ async function recordVideo() {
     showError(error);
     elements.status.textContent = 'Recording failed';
   } finally {
+    cancelActionCapture(new Error('Recording ended.'));
     activeRecording = null;
-    completingChallenge = false;
     challenge.reset();
+    if (capture.stream) detector.start();
     elements.blinkAction.disabled = false;
     elements.mouthAction.disabled = false;
     elements.record.disabled = !capture.stream;
@@ -181,6 +242,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && capture.stream) stopCamera();
 });
 window.addEventListener('pagehide', () => {
+  cancelActionCapture(new Error('Page closed.'));
+  activeRecording?.stop('pagehide');
   detector.close();
   capture.stop();
   if (recordingUrl) URL.revokeObjectURL(recordingUrl);

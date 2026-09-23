@@ -56,6 +56,8 @@ export class LocalFaceDetector {
     this.running = false;
     this.frameHandle = null;
     this.lastVideoTime = -1;
+    this.lastDetectionAt = -Infinity;
+    this.minimumDetectionIntervalMs = 0;
   }
 
   async load() {
@@ -84,17 +86,25 @@ export class LocalFaceDetector {
     if (!this.landmarker || this.running) return;
     this.running = true;
     this.lastVideoTime = -1;
-    const detect = () => {
+    this.lastDetectionAt = -Infinity;
+    const detect = timestamp => {
       if (!this.running) return;
-      if (this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && this.video.currentTime !== this.lastVideoTime) {
+      if (this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          && this.video.currentTime !== this.lastVideoTime
+          && timestamp - this.lastDetectionAt >= this.minimumDetectionIntervalMs) {
         this.lastVideoTime = this.video.currentTime;
+        this.lastDetectionAt = timestamp;
         const assessment = assessFace(this.landmarker.detectForVideo(this.video, performance.now()));
         drawLandmarks(this.canvas, this.video, assessment.landmarks);
         this.onResult?.(assessment);
       }
-      this.frameHandle = requestAnimationFrame(detect);
+      this.frameHandle = this.running ? requestAnimationFrame(detect) : null;
     };
-    detect();
+    detect(performance.now());
+  }
+
+  setMaximumFrameRate(frameRate) {
+    this.minimumDetectionIntervalMs = Number.isFinite(frameRate) && frameRate > 0 ? 1000 / frameRate : 0;
   }
 
   stop() {

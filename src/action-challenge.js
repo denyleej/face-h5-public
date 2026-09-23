@@ -23,9 +23,9 @@ export class ActionChallenge {
     this.baselineFrames = 0;
   }
 
-  status(label) {
+  status(label, startRecording = false) {
     const prompt = label || (this.action === ACTIONS.BLINK ? 'Blink once' : 'Open and close your mouth');
-    return { active: this.active, detected: this.detected, action: this.action, phase: this.phase, prompt };
+    return { active: this.active, detected: this.detected, action: this.action, phase: this.phase, prompt, startRecording };
   }
 
   update(face) {
@@ -47,7 +47,10 @@ export class ActionChallenge {
       if (this.baselineFrames >= 2) this.phase = 'open';
       return this.status('Blink once');
     }
-    if (this.phase === 'open' && score > .35) this.phase = 'closing';
+    if (this.phase === 'open' && score > .35) {
+      this.phase = 'closing';
+      return this.status('Blink once', true);
+    }
     if (this.phase === 'closing' && score > .45) this.phase = 'closed';
     if (this.phase === 'closed' && score < .30) return this.complete('Blink detected');
     return this.status(this.phase === 'closed' ? 'Open your eyes' : 'Blink once');
@@ -61,7 +64,10 @@ export class ActionChallenge {
       if (this.baselineFrames >= 2) this.phase = 'closed';
       return this.status('Open your mouth');
     }
-    if (this.phase === 'closed' && score > .25) this.phase = 'opening';
+    if (this.phase === 'closed' && score > .25) {
+      this.phase = 'opening';
+      return this.status('Open your mouth', true);
+    }
     if (this.phase === 'opening' && score > .55) this.phase = 'open';
     if (this.phase === 'open' && score < .12) return this.complete('Mouth action detected');
     return this.status(this.phase === 'open' ? 'Close your mouth' : 'Open your mouth');

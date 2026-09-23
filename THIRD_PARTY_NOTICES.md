@@ -6,6 +6,34 @@ The project uses `@mediapipe/tasks-vision` and includes its browser WebAssembly 
 
 MediaPipe is provided by Google under the Apache License 2.0. Retain the upstream license and notice files when redistributing these artifacts.
 
+## MP4 muxer
+
+The project uses `mp4-muxer` 5.2.2 to package WebCodecs H.264 frames into MP4 files. It is distributed under the MIT License.
+
+```text
+MIT License
+
+Copyright (c) 2023 Vanilagy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Face Landmarker model
 
 `public/models/face_landmarker.task` is the official MediaPipe Face Landmarker float16 task model, revision 1, used for local face detection, landmark estimation, and blendshape output.
